@@ -1,6 +1,9 @@
 # User Table 
 - Consist of Id as primary key and new user data (ID,email,phone,password)
 
+# Admin Table
+- Consist of users with admin access
+
 # User Address
 - User_id as forign key(f.k) and address_id as f.k , one user_id can have multiple address_id
 - 2 or more users can share same address 
@@ -19,6 +22,9 @@
 
 # Product
 - Consist of name, discription, varient_id as f.k, price, image
+
+# Best seller 
+- Consist of product id and orderd id and count of sell
 
 # Product varient 
 - Consist of product_id as f.k and varient_options as f.k
