@@ -78,9 +78,10 @@ ALTER TABLE Customers
   CHECK (email = lower(email));
 
 ALTER TABLE Customers
-  ADD CONSTRAINT email CHECK (email ~* '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$')
+  ADD CONSTRAINT email_validation CHECK (email ~* '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$')
 
-
+ALTER TABLE Customers
+   ADD CONSTRAINT check_positive check (dataplan >= 0);
 
 #'get-Average hit rate for a website'
 SELECT logs.content_id, 
