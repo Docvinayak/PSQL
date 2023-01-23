@@ -1,6 +1,13 @@
 CREATE DATABASE cdn;
 \c cdn;
 
+CREATE TABLE Pages(
+    id SERIAL PRIMARY KEY,
+    web_site VARCHAR(255) NOT NULL UNIQUE,
+    page_url VARCHAR(255) NOT NULL UNIQUE,
+    FOREIGN KEY (web_site) REFERENCES Customers(web_site)
+);
+
 CREATE TABLE Servers (
     id SERIAL PRIMARY KEY,
     ip_address VARCHAR(255) NOT NULL UNIQUE,
@@ -14,11 +21,13 @@ CREATE TABLE Servers (
 CREATE TABLE Content (
     id SERIAL PRIMARY KEY,
     filename VARCHAR(255) NOT NULL,
+    page_id VARCHAR(255) NOT NULL,
     filesize INT NOT NULL,
     filetype VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     expiry_date DATE NOT NULL,
-    FOREIGN KEY (filename) REFERENCES Customers(web_site)
+    FOREIGN KEY (filename) REFERENCES Customers(web_site),
+    FOREIGN KEY (page_id) REFERENCES Pages(id)
 );
 
 CREATE TABLE Edge_Locations (
@@ -73,21 +82,66 @@ CREATE TABLE Customers(
     dataplan INT NOT NULL
 );
 
+ALTER TABLE Customers
+  ADD CONSTRAINT email_lower_check
+  CHECK (email = lower(email));
 
+ALTER TABLE Customers
+  ADD CONSTRAINT email_validation CHECK (email ~* '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$')
+
+ALTER TABLE Customers
+   ADD CONSTRAINT check_positive check (dataplan >= 0);
+
+#'get-Average hit rate for a website'
 SELECT logs.content_id, 
-(COUNT(content_id)/(select count(*) from logs)::decimal)*100 as AVG_HIT_RATE, 
-content.filename from logs
-join content on logs.content_id=content.id 
+(COUNT(content_id)/(SELECT count(*) FROM logs)::decimal)*100 AS AVG_HIT_RATE, 
+content.filename FROM logs
+JOIN content ON logs.content_id=content.id 
 WHERE content.filename='https://apple.com'
 GROUP BY logs.content_id,content.filename 
 ORDER BY avg_hit_rate DESC;
 
-SELECT count(content_id) as counter,
-(COUNT(content_id)/(select count(*) from logs)::decimal)*100 as AVG_HIT_RATE, 
+#'Most request files WITH request count , AND bytes delivered'
+SELECT count(content_id) AS counter,
+content.filename ,
+content.filetype,
+content.filesize,
+content.filesize*count(content_id) as bit_deliverd
+FROM logs
+JOIN content ON logs.content_id=content.id 
+GROUP BY logs.content_id,content.filename,content.filetype,content.filesize
+ORDER BY counter DESC LIMIT 1;
+
+
+
+#'Most request files WITH hits, misses'
+SELECT count(content_id) AS counter,
+response_code,
+(COUNT(content_id)/(SELECT count(*) FROM logs)::decimal)*100 AS AVG_HIT_miss_RATE, 
+content.filename ,
+content.filetype
+FROM logs
+JOIN content ON logs.content_id=content.id 
+WHERE filename = (SELECT filename FROM (SELECT count(content_id) AS counter,
+(COUNT(content_id)/(select count(*) from logs)::decimal)*100 as AVG_HIT_miss_RATE, 
 content.filename ,
 content.filetype
 from logs
 join content on logs.content_id=content.id 
 GROUP BY logs.content_id,content.filename,content.filetype
-ORDER BY AVG_HIT_RATE DESC LIMIT 1;
+ORDER BY AVG_HIT_miss_RATE DESC LIMIT 1) AS D)
+GROUP BY logs.content_id,content.filename,content.filetype,response_code
+ORDER BY filename;
 
+#'search files with extension'
+select * from content where filetype like '%.png';
+
+#'used data plan'
+SELECT content.filesize*count(content_id) AS used_data,
+content.filesize,
+(COUNT(content_id)/(SELECT count(*) FROM logs)::decimal)*100 AS AVG_HIT_RATE, 
+content.filename FROM logs
+JOIN content ON logs.content_id=content.id 
+WHERE content.filename='https://apple.com'
+GROUP BY logs.content_id,content.filename,content.filesize
+ORDER BY avg_hit_rate DESC;
