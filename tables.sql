@@ -1,6 +1,13 @@
 CREATE DATABASE cdn;
 \c cdn;
 
+CREATE TABLE Pages(
+    id SERIAL PRIMARY KEY,
+    web_site VARCHAR(255) NOT NULL UNIQUE,
+    page_url VARCHAR(255) NOT NULL UNIQUE,
+    FOREIGN KEY (web_site) REFERENCES Customers(web_site)
+);
+
 CREATE TABLE Servers (
     id SERIAL PRIMARY KEY,
     ip_address VARCHAR(255) NOT NULL UNIQUE,
@@ -14,11 +21,13 @@ CREATE TABLE Servers (
 CREATE TABLE Content (
     id SERIAL PRIMARY KEY,
     filename VARCHAR(255) NOT NULL,
+    page_id VARCHAR(255) NOT NULL,
     filesize INT NOT NULL,
     filetype VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     expiry_date DATE NOT NULL,
-    FOREIGN KEY (filename) REFERENCES Customers(web_site)
+    FOREIGN KEY (filename) REFERENCES Customers(web_site),
+    FOREIGN KEY (page_id) REFERENCES Pages(id)
 );
 
 CREATE TABLE Edge_Locations (
